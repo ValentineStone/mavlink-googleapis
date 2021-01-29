@@ -1,26 +1,30 @@
 {
-  "author": "Google Inc.",
-  "version": "0.0.1",
-  "description": "MQTT Example for Google Cloud IoT Core using NodeJS.",
-  "license": "Apache-2.0",
-  "main": "cloudiot_mqtt_example_nodejs.js",
-  "name": "nodejs-docs-samples-iot-mqtt-example",
+  "author": "Leonid Romanovsky <sirLeonidRomanovsky@gmail.com>",
+  "version": "0.2.1",
+  "description": "Mavlink over Google Cloud IoT Core MQTT using NodeJS.",
+  "license": "MIT",
+  "main": "service.js",
+  "name": "mavlink-googleapis",
   "files": [
     "*.js"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/googleapis/nodejs-iot.git"
+    "url": "https://github.com/ValentineStone/mavlink-googleapis.git"
   },
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=14.0.0"
   },
-  "scripts": {},
+  "scripts": {
+    "master": "node service.js master",
+    "device": "node service.js device"
+  },
   "dependencies": {
     "@google-cloud/iot": "^2.2.0",
-    "@google-cloud/pubsub": "^2.8.0",
     "dotenv": "^8.2.0",
     "jsonwebtoken": "^8.5.0",
+    "jspack": "^0.0.4",
+    "lodash": "^4.17.20",
     "mqtt": "^4.0.0"
   }
 }
