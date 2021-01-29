@@ -3,11 +3,7 @@
   "version": "0.2.1",
   "description": "Mavlink over Google Cloud IoT Core MQTT using NodeJS.",
   "license": "MIT",
-  "main": "service.js",
   "name": "mavlink-googleapis",
-  "files": [
-    "*.js"
-  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/ValentineStone/mavlink-googleapis.git"
