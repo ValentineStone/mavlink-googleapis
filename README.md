@@ -8,3 +8,9 @@ Mavlink over Google Cloud IoT Core MQTT using NodeJS.
 3. `npm i`
 4. `cp .env.example .env` and change it according to your setup
 5. `npm run device` or `npm run master`
+
+### To generate keys
+```
+openssl ecparam -genkey -name prime256v1 -noout -out ec_private.pem
+openssl ec -in ec_private.pem -pubout -out ec_public.pem
+```
