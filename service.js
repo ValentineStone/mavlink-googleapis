@@ -1,6 +1,5 @@
 require('dotenv/config')
 const iot = require('@google-cloud/iot')
-const { PubSub } = require('@google-cloud/pubsub')
 const { readFileSync } = require('fs')
 const jwt = require('jsonwebtoken')
 const mqtt = require('mqtt')
