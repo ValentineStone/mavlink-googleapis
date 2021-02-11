@@ -13,6 +13,7 @@ const masterId = process.env.DEVICE_ID + '-master'
 const publicKeyFile = process.env.PUBLIC_KEY_FILE
 const privateKeyFile = process.env.PRIVATE_KEY_FILE
 const bufferAccumulatorSize = +process.env.BUFFER_ACCUMULATOR_SIZE
+const bufferAccumulatorTTL = +process.env.BUFFER_ACCUMULATOR_TTL
 const stub = !!process.env.STUB
 
 const algorithm = `ES256`
@@ -106,6 +107,7 @@ async function mqttConnect(asDeviceId) {
 
 async function createController(localId, remoteId) {
   let accumulator = Buffer.from([])
+  let accumulatorTime = 0
   const client = await mqttConnect(localId)
   client.subscribe(`/devices/${localId}/commands/#`, { qos: 0 })
   const remotePath = iotClient.devicePath(
@@ -117,9 +119,13 @@ async function createController(localId, remoteId) {
   const controller = {
     send: async message => {
       accumulator = Buffer.concat([accumulator, message])
-      if (accumulator.length >= bufferAccumulatorSize) {
+      if (
+        accumulator.length >= bufferAccumulatorSize
+        || Date.now() - accumulatorTime >= bufferAccumulatorTTL
+      ) {
         const binaryData = accumulator
         accumulator = Buffer.from([])
+        accumulatorTime = Date.now()
         if (stub) return
         return await iotClient.sendCommandToDevice({
           name: remotePath,
