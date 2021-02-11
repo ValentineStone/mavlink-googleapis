@@ -1,5 +1,4 @@
 const dgram = require('dgram')
-const { debounce } = require('lodash')
 const { MAVLink20Processor, mavlink20 } = require('./MAVLink20')
 
 const udpGCSHost = process.env.MASTER_UDP_GCS_HOST

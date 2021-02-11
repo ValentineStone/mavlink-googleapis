@@ -21,6 +21,10 @@
     "jsonwebtoken": "^8.5.0",
     "jspack": "^0.0.4",
     "lodash": "^4.17.20",
-    "mqtt": "^4.0.0"
+    "mqtt": "^4.0.0",
+    "serialport": "^9.0.6"
+  },
+  "peerDependencies": {
+    "serialport": "^9.0.6"
   }
 }

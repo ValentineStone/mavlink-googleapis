@@ -13,6 +13,7 @@ const masterId = process.env.DEVICE_ID + '-master'
 const publicKeyFile = process.env.PUBLIC_KEY_FILE
 const privateKeyFile = process.env.PRIVATE_KEY_FILE
 const bufferAccumulatorSize = +process.env.BUFFER_ACCUMULATOR_SIZE
+const stub = !!process.env.STUB
 
 const algorithm = `ES256`
 const mqttBridgeHostname = `mqtt.googleapis.com`
@@ -119,6 +120,7 @@ async function createController(localId, remoteId) {
       if (accumulator.length >= bufferAccumulatorSize) {
         const binaryData = accumulator
         accumulator = Buffer.from([])
+        if (stub) return
         return await iotClient.sendCommandToDevice({
           name: remotePath,
           binaryData,
@@ -152,6 +154,14 @@ async function runDevice() {
   require('./device')(controller)
 }
 
+async function runDevice_udp() {
+  await ensureDeviceRegistry()
+  await ensureDevice()
+  await ensureMaster()
+  const controller = await createController(deviceId, masterId)
+  require('./device-udp')(controller)
+}
+
 async function runMaster() {
   await ensureDeviceRegistry()
   await ensureDevice()
@@ -160,9 +170,17 @@ async function runMaster() {
   require('./master')(controller)
 }
 
-if (process.argv[2] === 'master')
-  runMaster().catch(console.error)
-else if (process.argv[2] === 'device')
-  runDevice().catch(console.error)
-else
-  throw new Error('Unknown service name: ' + process.argv[2])
+async function main() {
+  if (process.argv[2] === 'master')
+    await runMaster()
+  else if (process.argv[2] === 'device') {
+    if (process.argv[3] === 'udp')
+      await runDevice_udp()
+    else
+      await runDevice()
+  }
+  else
+    throw new Error('Unknown service name: ' + process.argv[2])
+}
+
+main().catch(console.error)
