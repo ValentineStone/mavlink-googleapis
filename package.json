@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@google-cloud/iot": "^2.2.0",
+    "colors": "^1.4.0",
     "dotenv": "^8.2.0",
     "jsonwebtoken": "^8.5.0",
     "jspack": "^0.0.4",

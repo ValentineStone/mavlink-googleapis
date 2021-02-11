@@ -1,5 +1,6 @@
 const SerialPort = require('serialport')
 const { MAVLink20Processor, mavlink20 } = require('./MAVLink20')
+const colors = require('colors')
 
 const mavlinkId = +process.env.MAVLINK_ID
 const path = process.env.DEVICE_SERIAL_PATH
@@ -16,7 +17,7 @@ const run = async (controller) => {
   let serialport
 
   try {
-    console.log('Connecting...')
+    console.log('Startig...'.brightBlue)
 
     serialport = new SerialPort(path, {
       baudRate: baudRate,
@@ -25,24 +26,19 @@ const run = async (controller) => {
 
     await new Promise((resolve, reject) => {
       serialport.on('error', reject)
-      serialport.on('open', error => {
-        if (error) reject(error)
-        console.log(`cloud <=> serial@${path}:${baudRate} <=> device`)
-        resolve()
-      })
+      serialport.on('open', error => error ? reject(error) : resolve())
       serialport.open()
     })
 
-    console.log('Serialport connected')
+    console.log('Serialport open'.brightBlue)
+    console.log(`cloud <=> serial@${path}:${baudRate} <=> device`)
 
     serialport.on('data', buff => {
       let msgCounter = 0
       for (const message of mav2.parseBuffer(buff)) {
         if (message instanceof mavlink20.messages.bad_data) {
-          if (message.msgbuf.length === 1)
-            msgCounter++
-          else
-            console.log('skip', 'send', message.msgbuf.length, 'as', 'bad_data')
+          if (message.msgbuf.length === 1) msgCounter++
+          else console.log('skip', 'send', message.msgbuf.length, 'as', 'bad_data')
           pong(serialport, message)
         }
         else {
@@ -52,7 +48,7 @@ const run = async (controller) => {
       }
       if (msgCounter)
         if (msgCounter === buff.length)
-          console.log('skip', 'send', buff)
+          console.log('skip', 'send', msgCounter, 'as', 'bad_data')
         else
           console.log('skip', 'send', 1, 'x', msgCounter, 'as', 'bad_data')
     })
@@ -72,10 +68,10 @@ const run = async (controller) => {
     })
   }
   catch (error) {
-    console.log('Stopping...')
+    console.log('Stopping...'.brightBlue)
     if (serialport) {
       await new Promise(r => serialport.close(r))
-      console.log('Stopped Serialport')
+      console.log('Serialport closed'.brightBlue)
     }
     return error
   }
@@ -109,9 +105,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
 const rerun = (controller) => {
   run(controller).then(error => {
     console.log(error.message)
-    console.log('Waiting restart timeout...')
+    console.log('Waiting restart timeout...'.brightBlue)
     wait(restartDelay)
-      .then(() => console.log('Restarting...'))
+      .then(() => console.log('Restarting...'.brightBlue))
       .then(() => rerun(controller))
   })
 }
