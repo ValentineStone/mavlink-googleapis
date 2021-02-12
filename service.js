@@ -3,6 +3,7 @@ const iot = require('@google-cloud/iot')
 const { readFileSync } = require('fs')
 const jwt = require('jsonwebtoken')
 const mqtt = require('mqtt')
+const colors = require('colors')
 
 // Pull from environment
 const projectId = process.env.PROJECT_ID
@@ -126,6 +127,7 @@ async function createController(localId, remoteId) {
         const binaryData = accumulator
         accumulator = Buffer.from([])
         accumulatorTime = Date.now()
+        console.log('SEND'.brightRed, binaryData.length, 'as RAW'.brightRed)
         if (stub) return
         return await iotClient.sendCommandToDevice({
           name: remotePath,
@@ -136,6 +138,7 @@ async function createController(localId, remoteId) {
     recv: null
   }
   client.on('message', (topic, message) => {
+    console.log('RECV'.brightRed, message.length, 'as RAW'.brightRed)
     if (controller.recv)
       controller.recv(message, topic, message)
   })
