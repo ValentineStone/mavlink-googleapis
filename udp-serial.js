@@ -57,29 +57,3 @@ udp_socket.on('message', buff => {
     console.log('udp => serial', buff.length, 'skip')
   }
 })
-
-
-
-
-/*
-let pongOnTimeout = false
-const pong = () => {
-  if (pongOnTimeout) return
-  if (pongTimeout) {
-    setTimeout(() => pongOnTimeout = false, pongTimeout)
-    pongOnTimeout = true
-  }
-  console.log('pong')
-  serialport.write(
-    Uint8Array.from(
-      processor.send(
-        new mavlink20.messages.command_long(
-          this.systemId, 1, 0,
-          mavlink20.MAV_CMD_REQUEST_MESSAGE,
-          mavlink20.MAVLINK_MSG_ID_PROTOCOL_VERSION
-        )
-      )
-    )
-  )
-}
-*/
