@@ -7,7 +7,10 @@ Mavlink over Google Cloud IoT Core MQTT using NodeJS.
 2. `cd mavlink-googleapis`
 3. `npm i`
 4. `cp .env.example .env` and change it according to your setup
-5. `npm run device` or `npm run master`
+5. `node service device` to connect serialport to Google IoT using MAVLink 2  
+   `node service device-udp` to connect udp to Google IoT using MAVLink 2  
+   `node service master` to connect Google IoT to GCS over udp using MAVLink 2  
+   `node udp-serial` to connect udp to serial directly (does not use Google IoT)
 
 ### To generate keys
 ```

@@ -192,4 +192,5 @@ async function main() {
     throw new Error('Unknown service name: ' + process.argv[2])
 }
 
-main().catch(console.error)
+if (require.main === module)
+  main().catch(console.error)
