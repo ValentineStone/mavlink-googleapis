@@ -2,6 +2,8 @@ const SerialPort = require('serialport')
 const { MAVLink20Processor, mavlink20 } = require('./MAVLink20')
 const colors = require('colors')
 
+const tracker = new TrafficTracker('from device serial', 'from cloud')
+
 const mavlinkId = +process.env.MAVLINK_ID
 const path = process.env.DEVICE_SERIAL_PATH
 const baudRate = +process.env.DEVICE_SERIAL_BAUD
@@ -34,32 +36,19 @@ const run = async (controller) => {
     console.log(`cloud <=> serial@${path}:${baudRate} <=> device`)
 
     serialport.on('data', buff => {
-      let msgCounter = 0
+      tracker['from device serial'] += buff.lebgth
       for (const message of mav2.parseBuffer(buff)) {
-        if (message instanceof mavlink20.messages.bad_data) {
-          if (message.msgbuf.length === 1) msgCounter++
-          else console.log('skip', 'send', message.msgbuf.length, 'as', 'bad_data')
+        if (message instanceof mavlink20.messages.bad_data)
           pong(serialport, message)
-        }
-        else {
-          console.log('send', message.msgbuf.length, 'as', message.name)
-          controller.send(message.msgbuf)
-        }
-      }
-      if (msgCounter)
-        if (msgCounter === buff.length)
-          console.log('skip', 'send', msgCounter, 'as', 'bad_data')
         else
-          console.log('skip', 'send', 1, 'x', msgCounter, 'as', 'bad_data')
+          controller.send(message.msgbuf)
+      }
     })
 
     controller.recv = buff => {
-      if (serialport.isOpen) {
-        console.log('recv', buff.length)
+      tracker['from cloud'] += buff.lebgth
+      if (serialport.isOpen)
         serialport.write(buff)
-      }
-      else
-        console.log('skip', 'recv', buff.length)
     }
 
     await new Promise((resolve, reject) => {

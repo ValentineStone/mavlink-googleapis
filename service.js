@@ -1,20 +1,25 @@
 require('dotenv/config')
+
+if (process.argv[2] === 'serial-udp')
+  return require('./serial-udp')
+
 const iot = require('@google-cloud/iot')
 const { readFileSync } = require('fs')
 const jwt = require('jsonwebtoken')
 const mqtt = require('mqtt')
-const colors = require('colors')
+const googleCredentials = require(process.env.GOOGLE_APPLICATION_CREDENTIALS)
 
 // Pull from environment
-const projectId = process.env.PROJECT_ID
+const projectId = googleCredentials.project_id
 const cloudRegion = process.env.CLOUD_REGION
-const registryId = process.env.REGISTRY_ID
-const deviceId = process.env.DEVICE_ID
-const masterId = process.env.DEVICE_ID + '-master'
+const deviceRegistryId = 'devices'
+const proxyRegistryId = 'proxies'
+const deviceId = 'd' + process.env.DEVICE_UUID
 const publicKeyFile = process.env.PUBLIC_KEY_FILE
 const privateKeyFile = process.env.PRIVATE_KEY_FILE
 const bufferAccumulatorSize = +process.env.BUFFER_ACCUMULATOR_SIZE
 const bufferAccumulatorTTL = +process.env.BUFFER_ACCUMULATOR_TTL
+const commandsSubfolder = 'mavlink2'
 const stub = !!process.env.STUB
 
 const algorithm = `ES256`
@@ -28,33 +33,18 @@ const catchAlreadyExists = e => {
   else throw e
 }
 
-async function ensureDeviceRegistry() {
+async function ensureRegistry(registryId) {
   await iotClient.createDeviceRegistry({
     parent: iotClient.locationPath(projectId, cloudRegion),
     deviceRegistry: { id: registryId },
   }).catch(catchAlreadyExists)
 }
 
-async function ensureDevice() {
+async function ensureDevice(registryId, deviceId) {
   await iotClient.createDevice({
     parent: iotClient.registryPath(projectId, cloudRegion, registryId),
     device: {
       id: deviceId,
-      credentials: [{
-        publicKey: {
-          format: 'ES256_PEM',
-          key: readFileSync(publicKeyFile).toString(),
-        },
-      }],
-    },
-  }).catch(catchAlreadyExists)
-}
-
-async function ensureMaster() {
-  await iotClient.createDevice({
-    parent: iotClient.registryPath(projectId, cloudRegion, registryId),
-    device: {
-      id: masterId,
       credentials: [{
         publicKey: {
           format: 'ES256_PEM',
@@ -78,9 +68,9 @@ const createJwt = (projectId, privateKeyFile, algorithm) => {
   return jwt.sign(token, privateKey, { algorithm })
 }
 
-async function mqttConnect(asDeviceId) {
+async function mqttConnect(registryId, deviceId) {
   const mqttClientId = iotClient.devicePath(
-    projectId, cloudRegion, registryId, asDeviceId)
+    projectId, cloudRegion, registryId, deviceId)
 
   // With Google Cloud IoT Core, the username field is ignored, however it must
   // be non-empty. The password field is used to transmit a JWT to authorize the
@@ -106,16 +96,19 @@ async function mqttConnect(asDeviceId) {
   })
 }
 
-async function createController(localId, remoteId) {
+async function createController(
+  localRegistry, localDevice,
+  remoteRegistry, remoteDevice
+) {
   let accumulator = Buffer.from([])
   let accumulatorTime = 0
-  const client = await mqttConnect(localId)
-  client.subscribe(`/devices/${localId}/commands/#`, { qos: 0 })
+  const client = await mqttConnect(localRegistry, localDevice)
+  client.subscribe(`/devices/${localDevice}/commands/#`, { qos: 0 })
   const remotePath = iotClient.devicePath(
     projectId,
     cloudRegion,
-    registryId,
-    remoteId
+    remoteRegistry,
+    remoteDevice
   )
   const controller = {
     send: async message => {
@@ -127,67 +120,66 @@ async function createController(localId, remoteId) {
         const binaryData = accumulator
         accumulator = Buffer.from([])
         accumulatorTime = Date.now()
-        console.log('SEND'.brightRed, binaryData.length, 'as RAW'.brightRed)
         if (stub) return
         return await iotClient.sendCommandToDevice({
           name: remotePath,
           binaryData,
+          subfolder: commandsSubfolder
         }).catch(e => { })
       }
     },
     recv: null
   }
   client.on('message', (topic, message) => {
-    console.log('RECV'.brightRed, message.length, 'as RAW'.brightRed)
-    if (controller.recv)
+    if (controller.recv && topic.endsWith(commandsSubfolder))
       controller.recv(message, topic, message)
   })
   return controller
 }
 
-async function asChat(controller) {
-  controller.recv = message => console.log(message.toString())
-  for await (const message of require('readline').createInterface({
-    input: process.stdin,
-    output: process.stdout
-  })) {
-    controller.send(Buffer.from(message))
-  }
-}
-
 async function runDevice() {
-  await ensureDeviceRegistry()
-  await ensureDevice()
-  await ensureMaster()
-  const controller = await createController(deviceId, masterId)
+  await ensureRegistry(deviceRegistryId)
+  await ensureRegistry(proxyRegistryId)
+  await ensureDevice(deviceRegistryId, deviceId)
+  await ensureDevice(proxyRegistryId, deviceId)
+  const controller = await createController(
+    deviceRegistryId, deviceId,
+    proxyRegistryId, deviceId,
+  )
   require('./device')(controller)
 }
 
 async function runDevice_udp() {
-  await ensureDeviceRegistry()
-  await ensureDevice()
-  await ensureMaster()
-  const controller = await createController(deviceId, masterId)
+  await ensureRegistry(deviceRegistryId)
+  await ensureRegistry(proxyRegistryId)
+  await ensureDevice(deviceRegistryId, deviceId)
+  await ensureDevice(proxyRegistryId, deviceId)
+  const controller = await createController(
+    deviceRegistryId, deviceId,
+    proxyRegistryId, deviceId,
+  )
   require('./device-udp')(controller)
 }
 
-async function runMaster() {
-  await ensureDeviceRegistry()
-  await ensureDevice()
-  await ensureMaster()
-  const controller = await createController(masterId, deviceId)
-  require('./master')(controller)
+async function runProxy() {
+  await ensureRegistry(deviceRegistryId)
+  await ensureRegistry(proxyRegistryId)
+  await ensureDevice(deviceRegistryId, deviceId)
+  await ensureDevice(proxyRegistryId, deviceId)
+  const controller = await createController(
+    proxyRegistryId, deviceId,
+    deviceRegistryId, deviceId,
+  )
+  require('./proxy')(controller)
 }
 
 async function main() {
-  if (process.argv[2] === 'master')
-    await runMaster()
-  else if (process.argv[2] === 'device') {
-    if (process.argv[3] === 'udp')
-      await runDevice_udp()
-    else
-      await runDevice()
-  }
+  if (process.argv[2] === 'proxy')
+    await runProxy()
+  else if (process.argv[2] === 'device-udp')
+    await runDevice_udp()
+  else if (process.argv[2] === 'device')
+    await runDevice()
   else
     throw new Error('Unknown service name: ' + process.argv[2])
 }

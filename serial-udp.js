@@ -1,12 +1,15 @@
 require('dotenv/config')
 const dgram = require('dgram')
 const SerialPort = require('serialport')
+const { TrafficTracker } = require('./utils')
 
 const path = process.env.DEVICE_SERIAL_PATH
 const baudRate = +process.env.DEVICE_SERIAL_BAUD
 
 const udpHost = process.env.DEVICE_UDP_HOST
 const udpPort = process.env.DEVICE_UDP_PORT
+
+const tracker = new TrafficTracker('from serial', 'from udp')
 
 let serialLocation = 'disconnected'
 let udpLocation = 'disconnected'
@@ -39,21 +42,13 @@ udp_socket.on('listening', () => {
 udp_socket.bind(udpPort, udpHost)
 
 serialport.on('data', buff => {
-  if (!rinfo) {
-    console.log('serial => udp', buff.length, 'skip')
-  }
-  else {
-    console.log('serial => udp', buff.length)
+  tracker['from serial'] += buff.length
+  if (rinfo)
     udp_socket.send(buff, rinfo.port, rinfo.address)
-  }
 })
 
 udp_socket.on('message', buff => {
-  if (serialport.isOpen) {
-    console.log('udp => serial', buff.length)
+  tracker['from udp'] += buff.length
+  if (serialport.isOpen)
     serialport.write(buff)
-  }
-  else {
-    console.log('udp => serial', buff.length, 'skip')
-  }
 })
