@@ -1,5 +1,5 @@
-require('colors')
-const pad = str => String(str).padStart(10, ' ').yellow
+const chalk = require('chalk')
+const pad = str => chalk.yellow(String(str).padStart(10, ' '))
 class TrafficTracker {
   constructor(name1, name2, interval = 1000) {
     this.name1 = name1

@@ -21,7 +21,7 @@ const printStatus = () => {
 
 const serialport = new SerialPort(
   path,
-  { baudRate },
+  { baudRate, lock: false },
   () => {
     serialLocation = `${path}:${baudRate}`
     printStatus()

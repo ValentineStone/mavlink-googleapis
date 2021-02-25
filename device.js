@@ -1,6 +1,7 @@
 const SerialPort = require('serialport')
 const { MAVLink20Processor, mavlink20 } = require('./MAVLink20')
-require('colors')
+const chalk = require('chalk')
+const { TrafficTracker } = require('./utils')
 
 const tracker = new TrafficTracker('from device serial', 'from cloud')
 
@@ -19,11 +20,12 @@ const run = async (controller) => {
   let serialport
 
   try {
-    console.log('Startig...'.brightBlue)
+    console.log(chalk.blueBright('Startig...'))
 
     serialport = new SerialPort(path, {
       baudRate: baudRate,
-      autoOpen: false
+      autoOpen: false,
+      lock: false,
     })
 
     await new Promise((resolve, reject) => {
@@ -32,11 +34,11 @@ const run = async (controller) => {
       serialport.open()
     })
 
-    console.log('Serialport open'.brightBlue)
+    console.log(chalk.blueBright('Serialport open'))
     console.log(`cloud <=> serial@${path}:${baudRate} <=> device`)
 
     serialport.on('data', buff => {
-      tracker['from device serial'] += buff.lebgth
+      tracker['from device serial'] += buff.length
       for (const message of mav2.parseBuffer(buff)) {
         if (message instanceof mavlink20.messages.bad_data)
           pong(serialport, message)
@@ -46,7 +48,7 @@ const run = async (controller) => {
     })
 
     controller.recv = buff => {
-      tracker['from cloud'] += buff.lebgth
+      tracker['from cloud'] += buff.length
       if (serialport.isOpen)
         serialport.write(buff)
     }
@@ -57,10 +59,10 @@ const run = async (controller) => {
     })
   }
   catch (error) {
-    console.log('Stopping...'.brightBlue)
+    console.log(chalk.blueBright('Stopping...'))
     if (serialport) {
       await new Promise(r => serialport.close(r))
-      console.log('Serialport closed'.brightBlue)
+      console.log(chalk.blueBright('Serialport closed'))
     }
     return error
   }
@@ -94,9 +96,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
 const rerun = (controller) => {
   run(controller).then(error => {
     console.log(error.message)
-    console.log('Waiting restart timeout...'.brightBlue)
+    console.log(chalk.blueBright('Waiting restart timeout...'))
     wait(restartDelay)
-      .then(() => console.log('Restarting...'.brightBlue))
+      .then(() => console.log(chalk.blueBright('Restarting...')))
       .then(() => rerun(controller))
   })
 }

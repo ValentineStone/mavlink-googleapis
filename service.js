@@ -168,6 +168,12 @@ async function runDevice_udp() {
   require('./device-udp')(controller)
 }
 
+async function runDevice_custom() {
+  await ensurePair()
+  const controller = await createController(deviceId, proxyId)
+  return controller
+}
+
 async function runProxy() {
   await ensurePair()
   const controller = await createController(proxyId, deviceId)
@@ -187,3 +193,7 @@ async function main() {
 
 if (require.main === module)
   main().catch(console.error)
+
+module.exports = {
+  runDevice_custom
+}
