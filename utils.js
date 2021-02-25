@@ -9,13 +9,17 @@ class TrafficTracker {
     setInterval(this.print, interval)
   }
   print = () => {
-    console.log('recieved',
-      pad(this[this.name1]), this.name1,
-      pad(this[this.name2]), this.name2,
-    )
+    if (!this.#silent) {
+      console.log('recieved',
+        pad(this[this.name1]), this.name1,
+        pad(this[this.name2]), this.name2,
+      )
+    }
     this[this.name1] = 0
     this[this.name2] = 0
   }
+  #silent = false
+  silent = (silent = true) => this.#silent = silent
 }
 
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'

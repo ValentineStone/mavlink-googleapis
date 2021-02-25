@@ -150,10 +150,8 @@ async function createController(localDevice, remoteDevice) {
   client.on('message', (topic, message) => {
     if (topic.endsWith(commandsSubfolder))
       controller.recv?.(message, topic, message)
-    else if (topic.endsWith(pingSubfolder)) {
+    else if (topic.endsWith(pingSubfolder))
       controller.ping = Date.now()
-      console.log('pinged')
-    }
   })
   return controller
 }
