@@ -18,4 +18,42 @@ class TrafficTracker {
   }
 }
 
-module.exports = { pad, TrafficTracker }
+const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+const random_char = () => alphabet[Math.floor(Math.random() * alphabet.length)]
+const uuid = require('uuid')
+const pair_uuid = () => random_char() + '-' + uuid.v1()
+
+
+const fs = require('fs')
+const persist = (path, generate) => {
+  let value
+  try { value = fs.readFileSync(path, 'utf-8') }
+  catch (e) { if (e.code !== 'ENOENT') throw e }
+  if (!value) fs.writeFileSync(path, value = generate(), 'utf-8')
+  return value
+}
+
+function throttleBuffer(send, bufferAccumulatorSize, bufferAccumulatorTTL, stub) {
+  let accumulator = Buffer.from([])
+  let accumulatorTime = 0
+  return buff => {
+    accumulator = Buffer.concat([accumulator, buff])
+    if (
+      accumulator.length >= bufferAccumulatorSize
+      || Date.now() - accumulatorTime >= bufferAccumulatorTTL
+    ) {
+      const buff = accumulator
+      accumulator = Buffer.from([])
+      accumulatorTime = Date.now()
+      if (!stub) return send(buff)
+    }
+  }
+}
+
+module.exports = {
+  pad,
+  TrafficTracker,
+  persist,
+  throttleBuffer,
+  pair_uuid,
+}

@@ -7,23 +7,28 @@ const iot = require('@google-cloud/iot')
 const { readFileSync } = require('fs')
 const jwt = require('jsonwebtoken')
 const mqtt = require('mqtt')
+const { throttleBuffer, persist, pair_uuid } = require('./utils')
 const googleCredentials = require(process.env.GOOGLE_APPLICATION_CREDENTIALS)
 
 // Pull from environment
 const projectId = googleCredentials.project_id
 const cloudRegion = process.env.CLOUD_REGION
-const deviceRegistryId = 'devices'
-const proxyRegistryId = 'proxies'
-const deviceId = 'd' + process.env.DEVICE_UUID
+const registryId = 'mavlink-googleapis-proxy-pairs'
+const pairId = persist('./keys/pair.uuid', pair_uuid)
+const deviceId = pairId + '-device'
+const proxyId = pairId + '-proxy'
 const publicKeyFile = process.env.PUBLIC_KEY_FILE
 const privateKeyFile = process.env.PRIVATE_KEY_FILE
 const bufferAccumulatorSize = +process.env.BUFFER_ACCUMULATOR_SIZE
 const bufferAccumulatorTTL = +process.env.BUFFER_ACCUMULATOR_TTL
-const commandsSubfolder = 'mavlink2'
 const stub = !!process.env.STUB
+const connectionKeepAlive = +process.env.PAIR_CONNECTION_KEEPALIVE
+const connectionPing = +process.env.PAIR_CONNECTION_PING
+const commandsSubfolder = 'mavlink2'
+const pingSubfolder = 'ping'
 
-const algorithm = `ES256`
-const mqttBridgeHostname = `mqtt.googleapis.com`
+const algorithm = 'ES256'
+const mqttBridgeHost = 'mqtt.googleapis.com'
 const mqttBridgePort = 8883
 
 const iotClient = new iot.v1.DeviceManagerClient()
@@ -33,14 +38,16 @@ const catchAlreadyExists = e => {
   else throw e
 }
 
-async function ensureRegistry(registryId) {
+const ignoreErrors = error => undefined
+
+async function ensureRegistry() {
   await iotClient.createDeviceRegistry({
     parent: iotClient.locationPath(projectId, cloudRegion),
     deviceRegistry: { id: registryId },
   }).catch(catchAlreadyExists)
 }
 
-async function ensureDevice(registryId, deviceId) {
+async function ensureDevice(deviceId) {
   await iotClient.createDevice({
     parent: iotClient.registryPath(projectId, cloudRegion, registryId),
     device: {
@@ -53,6 +60,12 @@ async function ensureDevice(registryId, deviceId) {
       }],
     },
   }).catch(catchAlreadyExists)
+}
+
+async function ensurePair() {
+  await ensureRegistry()
+  await ensureDevice(deviceId)
+  await ensureDevice(proxyId)
 }
 
 const createJwt = (projectId, privateKeyFile, algorithm) => {
@@ -71,13 +84,12 @@ const createJwt = (projectId, privateKeyFile, algorithm) => {
 async function mqttConnect(registryId, deviceId) {
   const mqttClientId = iotClient.devicePath(
     projectId, cloudRegion, registryId, deviceId)
-
   // With Google Cloud IoT Core, the username field is ignored, however it must
   // be non-empty. The password field is used to transmit a JWT to authorize the
   // device. The "mqtts" protocol causes the library to connect using SSL, which
   // is required for Cloud IoT Core.
   const connectionArgs = {
-    host: mqttBridgeHostname,
+    host: mqttBridgeHost,
     port: mqttBridgePort,
     clientId: mqttClientId,
     username: 'unused',
@@ -96,80 +108,65 @@ async function mqttConnect(registryId, deviceId) {
   })
 }
 
-async function createController(
-  localRegistry, localDevice,
-  remoteRegistry, remoteDevice
-) {
-  let accumulator = Buffer.from([])
-  let accumulatorTime = 0
-  const client = await mqttConnect(localRegistry, localDevice)
+const emptyBuffer = Buffer.from([0])
+async function createController(localDevice, remoteDevice) {
+  const client = await mqttConnect(registryId, localDevice)
   client.subscribe(`/devices/${localDevice}/commands/#`, { qos: 0 })
   const remotePath = iotClient.devicePath(
     projectId,
     cloudRegion,
-    remoteRegistry,
+    registryId,
     remoteDevice
   )
+  const ping = () => iotClient.sendCommandToDevice({
+    name: remotePath,
+    binaryData: emptyBuffer,
+    subfolder: pingSubfolder
+  }).catch(ignoreErrors)
+  setInterval(ping, connectionPing)
+  ping()
   const controller = {
-    send: async message => {
-      accumulator = Buffer.concat([accumulator, message])
-      if (
-        accumulator.length >= bufferAccumulatorSize
-        || Date.now() - accumulatorTime >= bufferAccumulatorTTL
-      ) {
-        const binaryData = accumulator
-        accumulator = Buffer.from([])
-        accumulatorTime = Date.now()
-        if (stub) return
-        return await iotClient.sendCommandToDevice({
-          name: remotePath,
-          binaryData,
-          subfolder: commandsSubfolder
-        }).catch(e => { })
-      }
-    },
+    ping: -Infinity,
+    send: throttleBuffer(
+      binaryData => {
+        if (Date.now() - controller.ping <= connectionKeepAlive) {
+          iotClient.sendCommandToDevice({
+            name: remotePath,
+            binaryData,
+            subfolder: commandsSubfolder
+          }).catch(ignoreErrors)
+        }
+      },
+      bufferAccumulatorSize,
+      bufferAccumulatorTTL,
+      stub
+    ),
     recv: null
   }
   client.on('message', (topic, message) => {
-    if (controller.recv && topic.endsWith(commandsSubfolder))
-      controller.recv(message, topic, message)
+    if (topic.endsWith(commandsSubfolder))
+      controller.recv?.(message, topic, message)
+    else if (topic.endsWith(pingSubfolder))
+      controller.ping = Date.now()
   })
   return controller
 }
 
 async function runDevice() {
-  await ensureRegistry(deviceRegistryId)
-  await ensureRegistry(proxyRegistryId)
-  await ensureDevice(deviceRegistryId, deviceId)
-  await ensureDevice(proxyRegistryId, deviceId)
-  const controller = await createController(
-    deviceRegistryId, deviceId,
-    proxyRegistryId, deviceId,
-  )
+  await ensurePair()
+  const controller = await createController(deviceId, proxyId)
   require('./device')(controller)
 }
 
 async function runDevice_udp() {
-  await ensureRegistry(deviceRegistryId)
-  await ensureRegistry(proxyRegistryId)
-  await ensureDevice(deviceRegistryId, deviceId)
-  await ensureDevice(proxyRegistryId, deviceId)
-  const controller = await createController(
-    deviceRegistryId, deviceId,
-    proxyRegistryId, deviceId,
-  )
+  await ensurePair()
+  const controller = await createController(deviceId, proxyId)
   require('./device-udp')(controller)
 }
 
 async function runProxy() {
-  await ensureRegistry(deviceRegistryId)
-  await ensureRegistry(proxyRegistryId)
-  await ensureDevice(deviceRegistryId, deviceId)
-  await ensureDevice(proxyRegistryId, deviceId)
-  const controller = await createController(
-    proxyRegistryId, deviceId,
-    deviceRegistryId, deviceId,
-  )
+  await ensurePair()
+  const controller = await createController(proxyId, deviceId)
   require('./proxy')(controller)
 }
 

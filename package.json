@@ -1,6 +1,6 @@
 {
   "author": "Leonid Romanovsky <sirLeonidRomanovsky@gmail.com>",
-  "version": "0.2.1",
+  "version": "0.3.1",
   "description": "Mavlink over Google Cloud IoT Core MQTT using NodeJS.",
   "license": "MIT",
   "name": "mavlink-googleapis",
@@ -23,7 +23,7 @@
     "jspack": "^0.0.4",
     "lodash": "^4.17.20",
     "mqtt": "^4.0.0",
-    "serialport": "^9.0.6"
+    "uuid": "^8.3.2"
   },
   "peerDependencies": {
     "serialport": "^9.0.6"

@@ -1,6 +1,6 @@
 const SerialPort = require('serialport')
 const { MAVLink20Processor, mavlink20 } = require('./MAVLink20')
-const colors = require('colors')
+require('colors')
 
 const tracker = new TrafficTracker('from device serial', 'from cloud')
 
