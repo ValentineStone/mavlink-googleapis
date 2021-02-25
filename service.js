@@ -7,18 +7,22 @@ const iot = require('@google-cloud/iot')
 const { readFileSync } = require('fs')
 const jwt = require('jsonwebtoken')
 const mqtt = require('mqtt')
+const uuid = require('uuid')
+const uuid_namespace = 'e72bc52c-7700-11eb-9439-0242ac130002'
 const { throttleBuffer, persist, pair_uuid } = require('./utils')
 const googleCredentials = require(process.env.GOOGLE_APPLICATION_CREDENTIALS)
 
 // Pull from environment
+const publicKeyFile = process.env.PUBLIC_KEY_FILE
+const privateKeyFile = process.env.PRIVATE_KEY_FILE
+const publicKey = readFileSync(publicKeyFile).toString()
+
 const projectId = googleCredentials.project_id
 const cloudRegion = process.env.CLOUD_REGION
 const registryId = 'mavlink-googleapis-proxy-pairs'
-const pairId = persist('./keys/pair.uuid', pair_uuid)
+const pairId = 'pair-' + uuid.v5(publicKey, uuid_namespace)
 const deviceId = pairId + '-device'
 const proxyId = pairId + '-proxy'
-const publicKeyFile = process.env.PUBLIC_KEY_FILE
-const privateKeyFile = process.env.PRIVATE_KEY_FILE
 const bufferAccumulatorSize = +process.env.BUFFER_ACCUMULATOR_SIZE
 const bufferAccumulatorTTL = +process.env.BUFFER_ACCUMULATOR_TTL
 const stub = !!process.env.STUB
@@ -55,7 +59,7 @@ async function ensureDevice(deviceId) {
       credentials: [{
         publicKey: {
           format: 'ES256_PEM',
-          key: readFileSync(publicKeyFile).toString(),
+          key: publicKey,
         },
       }],
     },
