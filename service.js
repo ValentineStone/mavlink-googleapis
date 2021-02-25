@@ -10,14 +10,16 @@ const mqtt = require('mqtt')
 const uuid = require('uuid')
 const uuid_namespace = 'e72bc52c-7700-11eb-9439-0242ac130002'
 const { throttleBuffer, persist, pair_uuid } = require('./utils')
-const googleCredentials = require(process.env.GOOGLE_APPLICATION_CREDENTIALS)
+
+const iotClient = new iot.v1.DeviceManagerClient()
 
 // Pull from environment
 const publicKeyFile = process.env.PUBLIC_KEY_FILE
 const privateKeyFile = process.env.PRIVATE_KEY_FILE
 const publicKey = readFileSync(publicKeyFile).toString()
 
-const projectId = googleCredentials.project_id
+let projectId
+const projectIdPromise = iotClient.auth.getProjectId().then(id => projectId = id)
 const cloudRegion = process.env.CLOUD_REGION
 const registryId = 'mavlink-googleapis-proxy-pairs'
 const pairId = 'pair-' + uuid.v5(publicKey, uuid_namespace)
@@ -34,8 +36,6 @@ const pingSubfolder = 'ping'
 const algorithm = 'ES256'
 const mqttBridgeHost = 'mqtt.googleapis.com'
 const mqttBridgePort = 8883
-
-const iotClient = new iot.v1.DeviceManagerClient()
 
 const catchAlreadyExists = e => {
   if (e.code === 6); // A resource with that parent and ID already exists
@@ -150,8 +150,10 @@ async function createController(localDevice, remoteDevice) {
   client.on('message', (topic, message) => {
     if (topic.endsWith(commandsSubfolder))
       controller.recv?.(message, topic, message)
-    else if (topic.endsWith(pingSubfolder))
+    else if (topic.endsWith(pingSubfolder)) {
       controller.ping = Date.now()
+      console.log('pinged')
+    }
   })
   return controller
 }
@@ -169,6 +171,7 @@ async function runDevice_udp() {
 }
 
 async function runDevice_custom() {
+  await projectIdPromise
   await ensurePair()
   const controller = await createController(deviceId, proxyId)
   return controller
@@ -181,6 +184,7 @@ async function runProxy() {
 }
 
 async function main() {
+  await projectIdPromise
   if (process.argv[2] === 'proxy')
     await runProxy()
   else if (process.argv[2] === 'device-udp')

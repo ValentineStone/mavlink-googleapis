@@ -5,7 +5,7 @@ const { TrafficTracker } = require('./utils')
 
 const tracker = new TrafficTracker('from device serial', 'from cloud')
 
-const mavlinkId = +process.env.MAVLINK_ID || 1
+const mavlinkId = +process.env.MAVLINK_SYSTEM_ID || 1
 const path = process.env.DEVICE_SERIAL_PATH
 const baudRate = +process.env.DEVICE_SERIAL_BAUD
 const restartDelay = +process.env.DEVICE_SERVICE_RESTART_DELAY
