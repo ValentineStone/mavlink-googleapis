@@ -1,4 +1,11 @@
-require('dotenv/config')
+const path = require('path')
+require('dotenv').config({ path: path.join(__dirname, '.env') })
+process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(
+  __dirname, process.env.GOOGLE_APPLICATION_CREDENTIALS)
+process.env.PUBLIC_KEY_FILE = path.join(
+  __dirname, process.env.PUBLIC_KEY_FILE)
+process.env.PRIVATE_KEY_FILE = path.join(
+  __dirname, process.env.PRIVATE_KEY_FILE)
 
 if (process.argv[2] === 'serial-udp')
   return require('./serial-udp')
@@ -190,7 +197,7 @@ async function main() {
   else if (process.argv[2] === 'device')
     await runDevice()
   else
-    throw new Error('Unknown service name: ' + process.argv[2])
+    await runProxy()
 }
 
 if (require.main === module)
