@@ -18,16 +18,18 @@ const uuid = require('uuid')
 const reorder = require('./reorder')
 const uuid_namespace = 'e72bc52c-7700-11eb-9439-0242ac130002'
 const { throttleBuffer, persist, pair_uuid } = require('./utils')
+const googleApplicationCredentials = require(process.env.GOOGLE_APPLICATION_CREDENTIALS)
 
-const iotClient = new iot.v1.DeviceManagerClient()
+const iotClient = new iot.v1.DeviceManagerClient({
+  credentials: googleApplicationCredentials
+})
 
 // Pull from environment
 const publicKeyFile = process.env.PUBLIC_KEY_FILE
 const privateKeyFile = process.env.PRIVATE_KEY_FILE
 const publicKey = readFileSync(publicKeyFile).toString()
 
-let projectId
-const projectIdPromise = iotClient.auth.getProjectId().then(id => projectId = id)
+const projectId = googleApplicationCredentials.project_id
 const cloudRegion = process.env.CLOUD_REGION
 const registryId = 'mavlink-googleapis-proxy-pairs'
 const pairId = 'pair-' + uuid.v5(publicKey, uuid_namespace)
@@ -70,14 +72,16 @@ async function ensureDevice(deviceId) {
           key: publicKey,
         },
       }],
-    },
+    },-
   }).catch(catchAlreadyExists)
 }
 
 async function ensurePair() {
   await ensureRegistry()
-  await ensureDevice(deviceId)
-  await ensureDevice(proxyId)
+  await Promise.all([
+    ensureDevice(deviceId),
+    ensureDevice(proxyId)
+  ])
 }
 
 const createJwt = (projectId, privateKeyFile, algorithm) => {
@@ -179,7 +183,6 @@ async function runDevice_udp() {
 }
 
 async function runDevice_custom() {
-  await projectIdPromise
   await ensurePair()
   const controller = await createController(deviceId, proxyId)
   return controller
@@ -192,7 +195,6 @@ async function runProxy() {
 }
 
 async function main() {
-  await projectIdPromise
   if (process.argv[2] === 'proxy')
     await runProxy()
   else if (process.argv[2] === 'device-udp')

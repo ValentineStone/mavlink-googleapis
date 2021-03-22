@@ -10,7 +10,6 @@ const pongTimeout = +process.env.DEVICE_SERVICE_PONG_TIMEOUT
 // Connect all together
 
 const run = async (controller) => {
-  controller.tracker = new TrafficTracker('from device serial', 'from cloud', controller.online)
 
   let serialport
 
@@ -61,6 +60,7 @@ const run = async (controller) => {
 const wait = ms => new Promise(r => setTimeout(r, ms))
 
 const rerun = (controller) => {
+  controller.tracker = new TrafficTracker('from device serial', 'from cloud', controller.online)
   run(controller).then(error => {
     console.log(error.message)
     console.log(chalk.blueBright('Waiting restart timeout...'))
