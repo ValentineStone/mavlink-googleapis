@@ -72,7 +72,7 @@ async function ensureDevice(deviceId) {
           key: publicKey,
         },
       }],
-    },-
+    },
   }).catch(catchAlreadyExists)
 }
 
