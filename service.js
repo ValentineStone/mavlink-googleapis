@@ -15,6 +15,7 @@ const { readFileSync } = require('fs')
 const jwt = require('jsonwebtoken')
 const mqtt = require('mqtt')
 const uuid = require('uuid')
+const reorder = require('./reorder')
 const uuid_namespace = 'e72bc52c-7700-11eb-9439-0242ac130002'
 const { throttleBuffer, persist, pair_uuid } = require('./utils')
 
@@ -121,6 +122,7 @@ async function mqttConnect(registryId, deviceId) {
 
 const emptyBuffer = Buffer.from([0])
 async function createController(localDevice, remoteDevice) {
+  const reorder_adapter = reorder()
   const client = await mqttConnect(registryId, localDevice)
   client.subscribe(`/devices/${localDevice}/commands/#`, { qos: 0 })
   const remotePath = iotClient.devicePath(
@@ -138,12 +140,13 @@ async function createController(localDevice, remoteDevice) {
   ping()
   const controller = {
     ping: -Infinity,
+    online: () => Date.now() - controller.ping <= connectionKeepAlive,
     send: throttleBuffer(
-      binaryData => {
-        if (Date.now() - controller.ping <= connectionKeepAlive) {
+      buff => {
+        if (controller.online()) {
           iotClient.sendCommandToDevice({
             name: remotePath,
-            binaryData,
+            binaryData: reorder_adapter.send(buff),
             subfolder: commandsSubfolder
           }).catch(ignoreErrors)
         }
@@ -156,7 +159,7 @@ async function createController(localDevice, remoteDevice) {
   }
   client.on('message', (topic, message) => {
     if (topic.endsWith(commandsSubfolder))
-      controller.recv?.(message, topic, message)
+      reorder_adapter.recv(message, controller.recv)
     else if (topic.endsWith(pingSubfolder))
       controller.ping = Date.now()
   })

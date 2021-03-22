@@ -1,18 +1,21 @@
 const chalk = require('chalk')
-const pad = str => chalk.yellow(String(str).padStart(10, ' '))
+const pad = str => (str === 0 ? chalk.gray : chalk.yellow)(String(str).padStart(7, ' '))
 class TrafficTracker {
-  constructor(name1, name2, interval = 1000) {
+  constructor(name1, name2, online, interval = 1000) {
     this.name1 = name1
     this.name2 = name2
     this[name1] = 0
     this[name2] = 0
-    setInterval(this.print, interval)
+    this.online = online
+    if (typeof interval === 'number')
+      setInterval(this.print, interval)
   }
   print = () => {
     if (!this.#silent) {
-      console.log('recieved',
-        pad(this[this.name1]), this.name1,
-        pad(this[this.name2]), this.name2,
+      console.log(
+        this.online() ? chalk.green('connected   ') : chalk.gray('disconnected'),
+        pad(this[this.name1]), this[this.name1] ? this.name1 : chalk.gray(this.name1),
+        pad(this[this.name2]), this[this.name2] ? this.name2 : chalk.gray(this.name2),
       )
     }
     this[this.name1] = 0

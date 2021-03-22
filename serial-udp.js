@@ -9,7 +9,7 @@ const baudRate = +process.env.DEVICE_SERIAL_BAUD
 const udpHost = process.env.DEVICE_UDP_HOST
 const udpPort = process.env.DEVICE_UDP_PORT
 
-const tracker = new TrafficTracker('from serial', 'from udp')
+const tracker = new TrafficTracker('from serial', 'from udp', () => true)
 
 let serialLocation = 'disconnected'
 let udpLocation = 'disconnected'

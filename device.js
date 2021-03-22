@@ -3,8 +3,6 @@ const { MAVLink20Processor, mavlink20 } = require('./MAVLink20')
 const chalk = require('chalk')
 const { TrafficTracker } = require('./utils')
 
-const tracker = new TrafficTracker('from device serial', 'from cloud')
-
 const mavlinkId = +process.env.MAVLINK_SYSTEM_ID || 1
 const path = process.env.DEVICE_SERIAL_PATH
 const baudRate = +process.env.DEVICE_SERIAL_BAUD
@@ -16,6 +14,7 @@ const mav2 = new MAVLink20Processor()
 // Connect all together
 
 const run = async (controller) => {
+  controller.tracker = new TrafficTracker('from device serial', 'from cloud', controller.online)
 
   let serialport
 
@@ -38,7 +37,7 @@ const run = async (controller) => {
     console.log(`cloud <=> serial@${path}:${baudRate} <=> device`)
 
     serialport.on('data', buff => {
-      tracker['from device serial'] += buff.length
+      controller.tracker['from device serial'] += buff.length
       for (const message of mav2.parseBuffer(buff)) {
         if (message instanceof mavlink20.messages.bad_data)
           pong(serialport, message)
@@ -48,7 +47,7 @@ const run = async (controller) => {
     })
 
     controller.recv = buff => {
-      tracker['from cloud'] += buff.length
+      controller.tracker['from cloud'] += buff.length
       if (serialport.isOpen)
         serialport.write(buff)
     }

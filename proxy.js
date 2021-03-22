@@ -2,7 +2,6 @@ const dgram = require('dgram')
 const { MAVLink20Processor, mavlink20 } = require('./MAVLink20')
 
 const { TrafficTracker } = require('./utils')
-const tracker = new TrafficTracker('from udp proxy', 'from cloud')
 
 const udpGCSHost = process.env.PROXY_UDP_GCS_HOST
 const udpGSCPort = process.env.PROXY_UDP_GCS_PORT
@@ -17,13 +16,14 @@ udp_socket.on('listening', () => {
 udp_socket.bind({})
 
 module.exports = controller => {
+  controller.tracker = new TrafficTracker('from udp proxy', 'from cloud', controller.online)
   controller.recv = buff => {
-    tracker['from cloud'] += buff.length
+    controller.tracker['from cloud'] += buff.length
     udp_socket.send(buff, udpGSCPort, udpGCSHost)
   }
 
   udp_socket.on('message', buff => {
-    tracker['from udp proxy'] += buff.length
+    controller.tracker['from udp proxy'] += buff.length
     for (const message of mav2.parseBuffer(buff)) {
       if (message instanceof mavlink20.messages.bad_data);
       else
