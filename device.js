@@ -1,15 +1,11 @@
 const SerialPort = require('serialport')
-const { MAVLink20Processor, mavlink20 } = require('./MAVLink20')
 const chalk = require('chalk')
 const { TrafficTracker } = require('./utils')
 
-const mavlinkId = +process.env.MAVLINK_SYSTEM_ID || 1
 const path = process.env.DEVICE_SERIAL_PATH
 const baudRate = +process.env.DEVICE_SERIAL_BAUD
 const restartDelay = +process.env.DEVICE_SERVICE_RESTART_DELAY
 const pongTimeout = +process.env.DEVICE_SERVICE_PONG_TIMEOUT
-
-const mav2 = new MAVLink20Processor()
 
 // Connect all together
 
@@ -38,12 +34,7 @@ const run = async (controller) => {
 
     serialport.on('data', buff => {
       controller.tracker['from device serial'] += buff.length
-      for (const message of mav2.parseBuffer(buff)) {
-        if (message instanceof mavlink20.messages.bad_data)
-          pong(serialport, message)
-        else
-          controller.send(message.msgbuf)
-      }
+      controller.send(buff)
     })
 
     controller.recv = buff => {
@@ -65,29 +56,6 @@ const run = async (controller) => {
     }
     return error
   }
-}
-
-// Utils
-
-let pongOnTimeout = false
-const pong = serialport => {
-  if (pongOnTimeout) return
-  if (pongTimeout) {
-    setTimeout(() => pongOnTimeout = false, pongTimeout)
-    pongOnTimeout = true
-  }
-  console.log('pong')
-  serialport.write(
-    Uint8Array.from(
-      mav2.send(
-        new mavlink20.messages.command_long(
-          mavlinkId, 1, 0,
-          mav2.MAV_CMD_REQUEST_MESSAGE,
-          mav2.MAVLINK_MSG_ID_PROTOCOL_VERSION
-        )
-      )
-    )
-  )
 }
 
 const wait = ms => new Promise(r => setTimeout(r, ms))

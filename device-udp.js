@@ -1,10 +1,8 @@
 const dgram = require('dgram')
-const { MAVLink20Processor, mavlink20 } = require('./MAVLink20')
 const { TrafficTracker } = require('./utils')
 
 const udpDeviceHost = process.env.DEVICE_UDP_HOST
 const udpDevicePort = process.env.DEVICE_UDP_PORT
-const mav2 = new MAVLink20Processor()
 
 const udp_socket = dgram.createSocket('udp4')
 let rinfo = null
@@ -25,9 +23,6 @@ module.exports = controller => {
   }
   udp_socket.on('message', buff => {
     controller.tracker['from device udp'] += buff.length
-    for (const message of mav2.parseBuffer(buff)) {
-      if (message instanceof mavlink20.messages.bad_data) /* bad message */;
-      else controller.send(message.msgbuf)
-    }
+    controller.send(buff)
   })
 }

@@ -38,7 +38,7 @@ const bufferAccumulatorTTL = +process.env.BUFFER_ACCUMULATOR_TTL
 const stub = !!process.env.STUB
 const connectionKeepAlive = +process.env.PAIR_CONNECTION_KEEPALIVE
 const connectionPing = +process.env.PAIR_CONNECTION_PING
-const commandsSubfolder = 'mavlink2'
+const commandsSubfolder = 'data'
 const pingSubfolder = 'ping'
 
 const algorithm = 'ES256'
