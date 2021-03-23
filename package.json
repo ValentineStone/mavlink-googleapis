@@ -30,9 +30,7 @@
     "jspack": "^0.0.4",
     "lodash": "^4.17.20",
     "mqtt": "^4.0.0",
+    "serialport": "^9.0.7",
     "uuid": "^8.3.2"
-  },
-  "peerDependencies": {
-    "serialport": "^9.0.7"
   }
 }
