@@ -1,4 +1,4 @@
-const spawn = (timeout = 2000, breakpoint = 2 ** 16 - 1) => {
+const spawn = (timeout = 2000, breakpoint = 2 ** 16 - 1, width = 1000) => {
   let out_packetno = 0
   const packetnobuff = Buffer.alloc(2)
   const send = (buff) => {
@@ -13,19 +13,14 @@ const spawn = (timeout = 2000, breakpoint = 2 ** 16 - 1) => {
   const in_packetno_next = () =>
     in_packetno_awaited = (in_packetno_awaited + 1) % breakpoint
   let last_rollout = Date.now()
-  let first_in_packet_time = undefined
-  const should_attempt_forced_rollout = () =>
-    Date.now() - first_in_packet_time < timeout
 
   const attempt_rollout = (callback, forced) => {
-    if (forced) console.log('FORCEDFORCEDFORCEDFORCEDFORCEDFORCEDFORCEDFORCED')
     let rolled_out = 0
     if (forced)
       while (!in_packets[in_packetno_awaited])
         in_packetno_next()
     while (in_packets[in_packetno_awaited]) {
       const buff = in_packets[in_packetno_awaited]
-      //console.log('push', in_packetno_awaited)
       in_packets[in_packetno_awaited] = null
       in_packets_buffered--
       callback?.(buff)
@@ -37,23 +32,18 @@ const spawn = (timeout = 2000, breakpoint = 2 ** 16 - 1) => {
     else if (
       !forced
       && in_packets_buffered
-      && should_attempt_forced_rollout()
+      && Date.now() - last_rollout >= timeout
     ) attempt_rollout(callback, true)
   }
 
   const recv = (buff, callback) => {
     const packetno = buff.readUInt16BE()
-    if (in_packetno_awaited !== packetno)
-      console.log('OUTOFORDEROUTOFORDEROUTOFORDEROUTOFORDEROUTOFORDEROUTOFORDER')
-    console.log('recv', packetno)
     if (in_packets[packetno])
       in_packets_buffered--
     in_packets[packetno] = buff.slice(2)
     in_packets_buffered++
     if (in_packetno_awaited === null)
       in_packetno_awaited = packetno
-    if (first_in_packet_time === undefined)
-      first_in_packet_time = Date.now()
     attempt_rollout(callback)
   }
 
