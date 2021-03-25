@@ -20,7 +20,7 @@ const spawn = (breakpoint = 2 ** 16 - 1, buffered_width = 100, skip_count = 5) =
       if (in_packet !== null) {
         if (in_packets[localno]) {
           for (let i = 0; i < in_packets.length; i++)
-            in_packets = null
+            in_packets[localno] = null
           in_packets_buffered = 0
           in_packetno_awaited = packetno
         }
