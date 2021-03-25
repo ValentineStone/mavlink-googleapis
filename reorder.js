@@ -88,7 +88,7 @@ const spawn = (breakpoint = 2 ** 16 - 1, buffered_width = 100, skip_count = 5) =
     const rolled_out = attempt_rollout(callback)
     if (!rolled_out) {
       const [count, packetno] = consecutive_seq(in_packetno_awaited, skip_count)
-      console.log(count, packetno)
+      console.log([count, packetno], '##########################')
       if (count >= skip_count) {
         in_packetno_awaited = packetno
         attempt_rollout(callback)
