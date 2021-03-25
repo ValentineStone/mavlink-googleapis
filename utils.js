@@ -43,17 +43,20 @@ const persist = (path, generate) => {
 function throttleBuffer(send, bufferAccumulatorSize, bufferAccumulatorTTL, stub) {
   let accumulator = Buffer.from([])
   let accumulatorTime = 0
+  let pushSend_timeout
+  const pushSend = () => {
+    clearTimeout(pushSend_timeout)
+    const buff = accumulator
+    accumulator = Buffer.from([])
+    accumulatorTime = Date.now()
+    if (!stub && buff.length) send(buff)
+    pushSend_timeout = setTimeout(pushSend, bufferAccumulatorTTL)
+  }
   return buff => {
     accumulator = Buffer.concat([accumulator, buff])
-    if (
-      accumulator.length >= bufferAccumulatorSize
+    if (accumulator.length >= bufferAccumulatorSize
       || Date.now() - accumulatorTime >= bufferAccumulatorTTL
-    ) {
-      const buff = accumulator
-      accumulator = Buffer.from([])
-      accumulatorTime = Date.now()
-      if (!stub) return send(buff)
-    }
+    ) pushSend()
   }
 }
 
