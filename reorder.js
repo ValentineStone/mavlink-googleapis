@@ -36,6 +36,7 @@ const spawn = (breakpoint = 2 ** 16 - 1, buffered_width = 100, skip_count = 5) =
     return in_packets[localno]
   }
   const consecutive_seq = (start_packetno, max) => {
+    let curr_packetno = start_packetno
     let seq_curr_packetno = start_packetno
     let seq_max_packetno = start_packetno
     let seq_max = 0
@@ -43,12 +44,13 @@ const spawn = (breakpoint = 2 ** 16 - 1, buffered_width = 100, skip_count = 5) =
     let seq_present = 0
     let seq_curr = false
     for (let i = 0; i < in_packets.length; i++) {
-      seq_curr_packetno++
+      curr_packetno++
       const pos = (i + start_packetno) % in_packets.length
       if (in_packets[pos]) {
         if (seq_present) {
           seq_curr++
         } else {
+          seq_curr_packetno = curr_packetno
           seq_present = true
           seq_curr = 1
         }
