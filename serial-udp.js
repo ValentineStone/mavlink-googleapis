@@ -31,7 +31,7 @@ const serialport = new SerialPort(
 const udp_socket = dgram.createSocket('udp4')
 let rinfo = null
 udp_socket.on('listening', () => {
-  udpLocation = `${path}:${baudRate}`
+  udpLocation = `${udpHost}:${udpPort}`
   printStatus()
   udp_socket.once('message', (msg, _rinfo) => {
     rinfo = _rinfo
