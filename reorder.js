@@ -1,4 +1,4 @@
-const spawn = (timeout = 100, breakpoint = 2 ** 16 - 1, width = 1000) => {
+const spawn = (timeout = 2000, breakpoint = 2 ** 16 - 1, width = 1000) => {
   let out_packetno = 0
   const packetnobuff = Buffer.alloc(2)
   const send = (buff) => {
