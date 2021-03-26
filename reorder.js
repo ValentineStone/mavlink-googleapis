@@ -85,10 +85,12 @@ const spawn = (breakpoint = 2 ** 16 - 1, buffered_width = 100, skip_count = 5) =
 
   const recv = (buff, callback) => {
     const packetno = buff.readUInt16BE()
+    console.log('RECV', packetno)
     in_packet(packetno, buff.slice(2))
     const rolled_out = attempt_rollout(callback)
     if (!rolled_out) {
       const [count, packetno] = consecutive_seq(in_packetno_awaited, skip_count)
+      console.log('OOO ', [count, packetno])
       if (count >= skip_count) {
         console.log('PACKET LOSS, SKIPPING')
         in_packetno_awaited = packetno
