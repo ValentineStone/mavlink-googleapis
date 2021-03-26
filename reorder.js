@@ -74,7 +74,9 @@ const spawn = (breakpoint = 2 ** 16 - 1, buffered_width = 100, skip_count = 5) =
   const attempt_rollout = callback => {
     let rolled_out = 0
     let in_packet_awaited
+    console.log('ROLL', in_packetno_awaited)
     while (in_packet_awaited = in_packet(in_packetno_awaited)) {
+      console.log('ROLL', in_packetno_awaited, '=', !!in_packet_awaited)
       in_packet(in_packetno_awaited, null)
       callback?.(in_packet_awaited)
       in_packetno_awaited = packetno_next(in_packetno_awaited)
