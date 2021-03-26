@@ -100,7 +100,15 @@ const spawn = (breakpoint = 2 ** 16 - 1, buffered_width = 100, skip_count = 5) =
     }
   }
 
-  return { send, recv }
+  const reset = () => {
+    console.log('FORCE RESET')
+    out_packetno = 0
+    in_packets = new Array(buffered_width)
+    in_packets_buffered = 0
+    in_packetno_awaited = null
+  }
+
+  return { send, recv, reset }
 }
 
 module.exports = spawn

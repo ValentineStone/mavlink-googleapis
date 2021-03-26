@@ -159,6 +159,9 @@ async function createController(localDevice, remoteDevice) {
             subfolder: commandsSubfolder
           }).catch(ignoreErrors)
         }
+        else {
+          reorder_adapter.reset()
+        }
       },
       bufferAccumulatorSize,
       bufferAccumulatorTTL,
@@ -167,8 +170,10 @@ async function createController(localDevice, remoteDevice) {
     recv: null
   }
   client.on('message', (topic, message) => {
-    if (topic.endsWith(commandsSubfolder))
+    if (topic.endsWith(commandsSubfolder)) {
+      if (!controller.online()) reorder_adapter.reset()
       reorder_adapter.recv(message, controller.recv)
+    }
     else if (topic.endsWith(pingSubfolder))
       controller.ping = Date.now()
   })
