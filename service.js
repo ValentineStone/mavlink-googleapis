@@ -39,7 +39,7 @@ const registryId = 'mavlink-googleapis-proxy-pairs'
 const pairId = 'pair-' + uuid.v5(publicKey, uuid_namespace)
 const deviceId = pairId + '-device'
 const proxyId = pairId + '-proxy'
-const bufferAccumulatorSize = +process.env.BUFFER_ACCUMULATOR_SIZE
+const bufferAccumulatorSize = 0 ; +process.env.BUFFER_ACCUMULATOR_SIZE
 const bufferAccumulatorTTL = +process.env.BUFFER_ACCUMULATOR_TTL
 const stub = !!process.env.STUB
 const connectionKeepAlive = +process.env.PAIR_CONNECTION_KEEPALIVE
@@ -150,7 +150,6 @@ async function createController(localDevice, remoteDevice) {
     ping: -Infinity,
     online: () => Date.now() - controller.ping <= connectionKeepAlive,
     send: buff => {
-      console.log(buff)
       const adapted = reorder_adapter.send(buff, back => controller?.back(back))
       controller.sendRaw(adapted)
     },
