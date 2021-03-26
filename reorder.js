@@ -1,4 +1,5 @@
 const { MAVLink20Processor, mavlink20 } = require('./MAVLink20')
+const pongTimeout = +process.env.DEVICE_SERVICE_PONG_TIMEOUT
 
 const spawn = () => {
   const mav2 = new MAVLink20Processor()
