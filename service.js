@@ -155,7 +155,7 @@ async function createController(localDevice, remoteDevice) {
         if (controller.online()) {
           iotClient.sendCommandToDevice({
             name: remotePath,
-            binaryData: reorder_adapter.send(buff),
+            binaryData: reorder_adapter.send(buff, back => controller?.recv(back)),
             subfolder: commandsSubfolder
           }).catch(ignoreErrors)
         }
