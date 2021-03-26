@@ -39,7 +39,7 @@ const registryId = 'mavlink-googleapis-proxy-pairs'
 const pairId = 'pair-' + uuid.v5(publicKey, uuid_namespace)
 const deviceId = pairId + '-device'
 const proxyId = pairId + '-proxy'
-const bufferAccumulatorSize = 0 ; +process.env.BUFFER_ACCUMULATOR_SIZE
+const bufferAccumulatorSize = +process.env.BUFFER_ACCUMULATOR_SIZE
 const bufferAccumulatorTTL = +process.env.BUFFER_ACCUMULATOR_TTL
 const stub = !!process.env.STUB
 const connectionKeepAlive = +process.env.PAIR_CONNECTION_KEEPALIVE
@@ -146,38 +146,64 @@ async function createController(localDevice, remoteDevice) {
   }).catch(ignoreErrors)
   setInterval(ping, connectionPing)
   ping()
-  const controller = {
-    ping: -Infinity,
-    online: () => Date.now() - controller.ping <= connectionKeepAlive,
-    send: buff => {
-      const adapted = reorder_adapter.send(buff, back => controller?.back(back))
-      controller.sendRaw(adapted)
-    },
-    sendRaw: throttleBuffer(
-      buff => {
-        if (controller.online()) {
-          iotClient.sendCommandToDevice({
-            name: remotePath,
-            binaryData: buff,
-            subfolder: commandsSubfolder
-          }).catch(ignoreErrors)
-        }
+
+  if (require.main !== module) {
+    const controller = {
+      ping: -Infinity,
+      online: () => Date.now() - controller.ping <= connectionKeepAlive,
+      send: buff => {
+        iotClient.sendCommandToDevice({
+          name: remotePath,
+          binaryData: buff,
+          subfolder: commandsSubfolder
+        }).catch(ignoreErrors)
       },
-      bufferAccumulatorSize,
-      bufferAccumulatorTTL,
-      stub
-    ),
-    recv: null
+      recv: null
+    }
+    client.on('message', (topic, message) => {
+      if (topic.endsWith(commandsSubfolder)) {
+        if (controller.recv) controller.recv(message)
+      }
+      else if (topic.endsWith(pingSubfolder)) {
+        controller.ping = Date.now()
+      }
+    })
+    return controller
   }
-  client.on('message', (topic, message) => {
-    if (topic.endsWith(commandsSubfolder)) {
-      reorder_adapter.recv(message, controller.recv)
+  else {
+    const controller = {
+      ping: -Infinity,
+      online: () => Date.now() - controller.ping <= connectionKeepAlive,
+      send: buff => {
+        const adapted = reorder_adapter.send(buff, back => controller?.back(back))
+        controller.sendRaw(adapted)
+      },
+      sendRaw: throttleBuffer(
+        buff => {
+          if (controller.online()) {
+            iotClient.sendCommandToDevice({
+              name: remotePath,
+              binaryData: buff,
+              subfolder: commandsSubfolder
+            }).catch(ignoreErrors)
+          }
+        },
+        bufferAccumulatorSize,
+        bufferAccumulatorTTL,
+        stub
+      ),
+      recv: null
     }
-    else if (topic.endsWith(pingSubfolder)) {
-      controller.ping = Date.now()
-    }
-  })
-  return controller
+    client.on('message', (topic, message) => {
+      if (topic.endsWith(commandsSubfolder)) {
+        reorder_adapter.recv(message, controller.recv)
+      }
+      else if (topic.endsWith(pingSubfolder)) {
+        controller.ping = Date.now()
+      }
+    })
+    return controller
+  }
 }
 
 async function runDevice() {
