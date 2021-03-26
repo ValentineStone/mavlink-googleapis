@@ -149,17 +149,19 @@ async function createController(localDevice, remoteDevice) {
   const controller = {
     ping: -Infinity,
     online: () => Date.now() - controller.ping <= connectionKeepAlive,
-    send: throttleBuffer(
+    send: buff => {
+      console.log(buff)
+      const adapted = reorder_adapter.send(buff, back => controller?.back(back))
+      controller.sendRaw(adapted)
+    },
+    sendRaw: throttleBuffer(
       buff => {
         if (controller.online()) {
           iotClient.sendCommandToDevice({
             name: remotePath,
-            binaryData: reorder_adapter.send(buff, back => controller?.recv(back)),
+            binaryData: buff,
             subfolder: commandsSubfolder
           }).catch(ignoreErrors)
-        }
-        else {
-          reorder_adapter.reset()
         }
       },
       bufferAccumulatorSize,
@@ -170,11 +172,9 @@ async function createController(localDevice, remoteDevice) {
   }
   client.on('message', (topic, message) => {
     if (topic.endsWith(commandsSubfolder)) {
-      if (!controller.online()) reorder_adapter.reset()
       reorder_adapter.recv(message, controller.recv)
     }
     else if (topic.endsWith(pingSubfolder)) {
-      if (!controller.online()) reorder_adapter.reset()
       controller.ping = Date.now()
     }
   })

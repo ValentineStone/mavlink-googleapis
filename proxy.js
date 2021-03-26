@@ -18,7 +18,10 @@ module.exports = controller => {
     controller.tracker['from cloud'] += buff.length
     udp_socket.send(buff, udpGSCPort, udpGCSHost)
   }
-
+  controller.back = buff => {
+    console.log('back')
+    udp_socket.send(buff, udpGSCPort, udpGCSHost)
+  }
   udp_socket.on('message', buff => {
     controller.tracker['from udp proxy'] += buff.length
     controller.send(buff)
