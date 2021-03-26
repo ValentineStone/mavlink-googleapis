@@ -43,8 +43,7 @@ const spawn = (breakpoint = 2 ** 16 - 1, buffered_width = 100, skip_count = 5) =
     let seq_max_pos = 0
     let seq_curr = 0
     let seq_present = false
-    for (let i = 0; i < in_packets.length; i++) {
-      curr_packetno++
+    for (let i = 0; i < in_packets.length; i++, curr_packetno++) {
       const pos = (i + start_packetno) % in_packets.length
       if (in_packets[pos]) {
         if (seq_present) {
