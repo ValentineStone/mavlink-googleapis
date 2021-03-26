@@ -9,7 +9,7 @@ process_env.PUBLIC_KEY_FILE = path.join(
   __dirname, process_env.PUBLIC_KEY_FILE)
 process_env.PRIVATE_KEY_FILE = path.join(
   __dirname, process_env.PRIVATE_KEY_FILE)
-  
+
 if (require.main === module)
   Object.assign(process.env, process_env)
 
@@ -174,8 +174,10 @@ async function createController(localDevice, remoteDevice) {
       if (!controller.online()) reorder_adapter.reset()
       reorder_adapter.recv(message, controller.recv)
     }
-    else if (topic.endsWith(pingSubfolder))
+    else if (topic.endsWith(pingSubfolder)) {
+      if (!controller.online()) reorder_adapter.reset()
       controller.ping = Date.now()
+    }
   })
   return controller
 }
