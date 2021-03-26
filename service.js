@@ -1,17 +1,16 @@
 const path = require('path')
 const { readFileSync } = require('fs')
-const envFile = path.join(__dirname, '.env')
-const envData = readFileSync(envFile)
-const process_env = require('dotenv').parse(envData)
-process_env.GOOGLE_APPLICATION_CREDENTIALS = path.join(
-  __dirname, process_env.GOOGLE_APPLICATION_CREDENTIALS)
-process_env.PUBLIC_KEY_FILE = path.join(
-  __dirname, process_env.PUBLIC_KEY_FILE)
-process_env.PRIVATE_KEY_FILE = path.join(
-  __dirname, process_env.PRIVATE_KEY_FILE)
 
-if (require.main === module)
-  Object.assign(process.env, process_env)
+if (require.main === module) {
+  const envFile = path.join(__dirname, '.env')
+  require('dotenv').config({ path: envFile })
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(
+    __dirname, process.env.GOOGLE_APPLICATION_CREDENTIALS)
+  process.env.PUBLIC_KEY_FILE = path.join(
+    __dirname, process.env.PUBLIC_KEY_FILE)
+  process.env.PRIVATE_KEY_FILE = path.join(
+    __dirname, process.env.PRIVATE_KEY_FILE)
+}
 
 if (process.argv[2] === 'serial-udp')
   return require('./serial-udp')
@@ -23,28 +22,28 @@ const uuid = require('uuid')
 const reorder = require('./reorder')
 const uuid_namespace = 'e72bc52c-7700-11eb-9439-0242ac130002'
 const { throttleBuffer, persist, pair_uuid } = require('./utils')
-const googleApplicationCredentials = require(process_env.GOOGLE_APPLICATION_CREDENTIALS)
+const googleApplicationCredentials = JSON.parse(readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS))
 
 const iotClient = new iot.v1.DeviceManagerClient({
   credentials: googleApplicationCredentials
 })
 
 // Pull from environment
-const publicKeyFile = process_env.PUBLIC_KEY_FILE
-const privateKeyFile = process_env.PRIVATE_KEY_FILE
+const publicKeyFile = process.env.PUBLIC_KEY_FILE
+const privateKeyFile = process.env.PRIVATE_KEY_FILE
 const publicKey = readFileSync(publicKeyFile).toString()
 
 const projectId = googleApplicationCredentials.project_id
-const cloudRegion = process_env.CLOUD_REGION
+const cloudRegion = process.env.CLOUD_REGION
 const registryId = 'mavlink-googleapis-proxy-pairs'
 const pairId = 'pair-' + uuid.v5(publicKey, uuid_namespace)
 const deviceId = pairId + '-device'
 const proxyId = pairId + '-proxy'
-const bufferAccumulatorSize = +process_env.BUFFER_ACCUMULATOR_SIZE
-const bufferAccumulatorTTL = +process_env.BUFFER_ACCUMULATOR_TTL
-const stub = !!process_env.STUB
-const connectionKeepAlive = +process_env.PAIR_CONNECTION_KEEPALIVE
-const connectionPing = +process_env.PAIR_CONNECTION_PING
+const bufferAccumulatorSize = +process.env.BUFFER_ACCUMULATOR_SIZE
+const bufferAccumulatorTTL = +process.env.BUFFER_ACCUMULATOR_TTL
+const stub = !!process.env.STUB
+const connectionKeepAlive = +process.env.PAIR_CONNECTION_KEEPALIVE
+const connectionPing = +process.env.PAIR_CONNECTION_PING
 const commandsSubfolder = 'data'
 const pingSubfolder = 'ping'
 

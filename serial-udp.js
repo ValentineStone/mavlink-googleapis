@@ -1,4 +1,3 @@
-require('dotenv/config')
 const dgram = require('dgram')
 const SerialPort = require('serialport')
 const { TrafficTracker } = require('./utils')
